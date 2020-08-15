@@ -1032,9 +1032,6 @@ std::string ReplicaImp::getReplicaState() const {
                checkpointsLog->currentActiveWindow().second,
                clientsManager->numberOfRequiredReservedPages())
       << std::endl;
-  ofstream nodeMapOutput("output.json");
-  LOG_INFO(GL,"PRINTING!");
-  nodeMapOutput<<oss.rdbuf();
   return oss.str();
 }
 
