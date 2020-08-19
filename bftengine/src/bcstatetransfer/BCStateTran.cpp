@@ -31,6 +31,8 @@
 #include "storage/key_manipulator_interface.h"
 #include "memorydb/client.h"
 #include "Handoff.hpp"
+#include "json_serializer.hpp"
+#define getName(var) #var
 
 // TODO(GG): for debugging - remove
 // #define DEBUG_SEND_CHECKPOINTS_IN_REVERSE_ORDER (1)
@@ -42,6 +44,7 @@ using std::chrono::milliseconds;
 using std::chrono::time_point;
 using std::chrono::system_clock;
 using namespace std::placeholders;
+using namespace concordUtils;
 
 namespace bftEngine {
 namespace SimpleBlockchainStateTransfer {
@@ -665,25 +668,35 @@ std::string BCStateTran::getStatus() {
   auto state = getFetchingState();
   auto current_source = sourceSelector_.currentReplica();
   auto preferred_replicas = sourceSelector_.preferredReplicasToString();
-
-  oss << "Fetching state: " << stateName(state) << std::endl;
-  oss << KVLOG(lastMsgSeqNum_, cacheOfVirtualBlockForResPages.size()) << std::endl << std::endl;
-  oss << "Last Msg Sequence Numbers (Replica ID: SeqNum):" << std::endl;
+  std::map<std::string, std::string> t;
+  oss << "{\n";
+  oss << ContainerToJson("Fetching state: ", stateName(state)) << std::endl;
+  oss << ContainerToJson(getName(lastMsgSeqNum_), std::to_string(lastMsgSeqNum_)) << std::endl;
+  oss << ContainerToJson(getName(cacheOfVirtualBlockForResPages.size()),
+                         std::to_string(cacheOfVirtualBlockForResPages.size()))
+      << std::endl;
   for (auto &[id, seq_num] : lastMsgSeqNumOfReplicas_) {
-    oss << "  " << id << ": " << seq_num << std::endl;
+    t.insert(toPair(std::to_string(id), seq_num));
   }
-  oss << std::endl << std::endl;
-
-  oss << "Cache Of virtual blocks for reserved pages:" << std::endl;
+  oss << ContainerToJson("Last Msg Sequence Numbers (Replica ID: SeqNum):", t) << "," << std::endl;
+  t.clear();
   for (auto entry : cacheOfVirtualBlockForResPages) {
     auto vblockDescriptor = entry.first;
-    oss << "  " << KVLOG(vblockDescriptor.checkpointNum, vblockDescriptor.lastCheckpointKnownToRequester) << std::endl;
+    t.insert(toPair(getName(vblockDescriptor.checkpointNum), vblockDescriptor.checkpointNum));
+    t.insert(toPair(getName(vblockDescriptor.lastCheckpointKnownToRequester),
+                    vblockDescriptor.lastCheckpointKnownToRequester));
   }
-  oss << std::endl << std::endl;
+  oss << ContainerToJson("Cache Of virtual blocks for reserved pages:", t) << "," << std::endl;
 
   if (isFetching()) {
-    oss << KVLOG(current_source, preferred_replicas, nextRequiredBlock_, totalSizeOfPendingItemDataMsgs) << std::endl;
+    oss << ContainerToJson(getName(current_source), std::to_string(current_source)) << std::endl;
+    oss << ContainerToJson(getName(preferred_replicas), preferred_replicas) << std::endl;
+    oss << ContainerToJson(getName(nextRequiredBlock_), std::to_string(nextRequiredBlock_)) << std::endl;
+    oss << ContainerToJson(
+               getName(totalSizeOfPendingItemDataMsgs), std::to_string(totalSizeOfPendingItemDataMsgs), true)
+        << std::endl;
   }
+  oss << "}";
   return oss.str();
 }
 
