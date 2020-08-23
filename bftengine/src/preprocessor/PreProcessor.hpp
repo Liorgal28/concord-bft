@@ -112,7 +112,7 @@ class PreProcessor {
   void handlePreProcessedReqByPrimary(const PreProcessRequestMsgSharedPtr &preProcessReqMsg,
                                       uint16_t clientId,
                                       uint32_t resultBufLen);
-  void handlePreProcessedReqPrimaryRetry(NodeIdType clientId, SeqNum reqSeqNum);
+  void handlePreProcessedReqPrimaryRetry(NodeIdType clientId);
   void finalizePreProcessing(NodeIdType clientId);
   void cancelPreProcessing(NodeIdType clientId);
   PreProcessingResult getPreProcessingConsensusResult(uint16_t clientId);
@@ -140,7 +140,7 @@ class PreProcessor {
   bftEngine::IRequestsHandler &requestsHandler_;
   const InternalReplicaApi &myReplica_;
   const ReplicaId myReplicaId_;
-  const uint32_t maxReplyMsgSize_;
+  const uint32_t maxPreExecResultSize_;
   const std::set<ReplicaId> &idsOfPeerReplicas_;
   const uint16_t numOfReplicas_;
   const uint16_t numOfClients_;
