@@ -116,6 +116,7 @@ void setDynamicallyConfigurableParameters(ReplicaConfig &config) {
   config.preExecReqStatusCheckTimerMillisec =
       ReplicaConfigSingleton::GetInstance().GetPreExecReqStatusCheckTimerMillisec();
   config.preExecConcurrencyLevel = ReplicaConfigSingleton::GetInstance().GetPreExecConcurrencyLevel();
+  config.preExecMaxResultSize = ReplicaConfigSingleton::GetInstance().GetPreExecMaxResultSize();
   config.maxExternalMessageSize = ReplicaConfigSingleton::GetInstance().GetMaxExternalMessageSize();
   config.maxReplyMessageSize = ReplicaConfigSingleton::GetInstance().GetMaxReplyMessageSize();
   config.maxNumOfReservedPages = ReplicaConfigSingleton::GetInstance().GetMaxNumOfReservedPages();
