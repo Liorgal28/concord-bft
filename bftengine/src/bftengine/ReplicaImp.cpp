@@ -165,6 +165,8 @@ void ReplicaImp::onMessage<ClientRequestMsg>(ClientRequestMsg *m) {
   const bool readOnly = m->isReadOnly();
   const ReqId reqSeqNum = m->requestSeqNum();
   const uint8_t flags = m->flags();
+  const auto idOfExternalClients = ReplicaConfigSingleton::GetInstance().GetNumOfClientProxies() +
+                                   ReplicaConfigSingleton::GetInstance().GetNumOfReplicas();
 
   SCOPED_MDC_PRIMARY(std::to_string(currentPrimary()));
   SCOPED_MDC_CID(m->getCid());
@@ -175,6 +177,12 @@ void ReplicaImp::onMessage<ClientRequestMsg>(ClientRequestMsg *m) {
   span.setTag("rid", config_.replicaId);
   span.setTag("cid", m->getCid());
   span.setTag("seq_num", reqSeqNum);
+
+  if (ReplicaConfigSingleton::GetInstance().GetPoolPerfFlag() && m->clientProxyId() >= idOfExternalClients) {
+    executeNoConsensus(span, m);
+    delete m;
+    return;
+  }
 
   if (ReplicaConfigSingleton::GetInstance().GetKeyExchangeOnStart()) {
     // If Multi sig keys havn't been replaced for all replicas and it's not a key ex msg
@@ -591,7 +599,7 @@ void ReplicaImp::onMessage<PrePrepareMsg>(PrePrepareMsg *msg) {
 void ReplicaImp::tryToStartSlowPaths() {
   if (!isCurrentPrimary() || isCollectingState() || !currentViewIsActive())
     return;  // TODO(GG): consider to stop the related timer when this method is not needed (to avoid useless
-             // invocations)
+  // invocations)
 
   const SeqNum minSeqNum = lastExecutedSeqNum + 1;
   SCOPED_MDC_PRIMARY(std::to_string(currentPrimary()));
@@ -928,7 +936,7 @@ void ReplicaImp::onMessage<FullCommitProofMsg>(FullCommitProofMsg *msg) {
       ConcordAssert(seqNumInfo.hasPrePrepareMsg());
 
       seqNumInfo.forceComplete();  // TODO(GG): remove forceComplete() (we know that  seqNumInfo is committed because
-                                   // of the  FullCommitProofMsg message)
+      // of the  FullCommitProofMsg message)
 
       if (ps_) {
         ps_->beginWriteTran();
@@ -1234,7 +1242,7 @@ void ReplicaImp::onMessage<CommitFullMsg>(CommitFullMsg *msg) {
     if (fcp != nullptr) {
       send(fcp,
            msgSender);  // TODO(GG): do we really want to send this message ? (msgSender already has a CommitFullMsg
-                        // for the same seq number)
+      // for the same seq number)
     } else if (commitFull != nullptr) {
       // nop
     } else {
@@ -1840,7 +1848,7 @@ void ReplicaImp::onMessage<ReplicaStatusMsg>(ReplicaStatusMsg *msg) {
             if (msg->isMissingPrePrepareMsgForViewChange(i)) {
               PrePrepareMsg *prePrepareMsg =
                   viewsManager->getPrePrepare(i);  // TODO(GG): we can avoid sending misleading message by using the
-                                                   // digest of the expected pre prepare message
+              // digest of the expected pre prepare message
               if (prePrepareMsg != nullptr) {
                 sendAndIncrementMetric(prePrepareMsg, msgSenderId, metric_sent_preprepare_msg_due_to_status_);
               }
@@ -1863,7 +1871,7 @@ void ReplicaImp::onMessage<ReplicaStatusMsg>(ReplicaStatusMsg *msg) {
         SeqNum beginRange =
             std::max(lastStableSeqNum + 1,
                      msg->getLastExecutedSeqNum() + 1);  // Notice that after a view change, we don't have to pass the
-                                                         // PrePrepare messages from the previous view. TODO(GG): verify
+        // PrePrepare messages from the previous view. TODO(GG): verify
         SeqNum endRange = std::min(lastStableSeqNum + kWorkWindowSize, msgLastStable + kWorkWindowSize);
 
         for (SeqNum i = beginRange; i <= endRange; i++) {
@@ -2984,7 +2992,7 @@ ReplicaImp::ReplicaImp(const LoadedReplicaData &ld,
         seqNumInfo.partialProofs().addSelfMsgAndPPDigest(
             p,
             tmpDigest);  // TODO(GG): consider using a method that directly adds the message/digest (as in the
-                         // examples below)
+        // examples below)
       }
 
       if (e.getSlowStarted()) {
@@ -3020,7 +3028,7 @@ ReplicaImp::ReplicaImp(const LoadedReplicaData &ld,
       if (e.isFullCommitProofMsgSet()) {
         PartialProofsSet &pps = seqNumInfo.partialProofs();
         bool added = pps.addMsg(e.getFullCommitProofMsg());  // TODO(GG): consider using a method that directly adds
-                                                             // the message (as in the examples below)
+        // the message (as in the examples below)
         ConcordAssert(added);  // we should verify the relevant signature when it is loaded
         ConcordAssert(e.getFullCommitProofMsg()->equals(*pps.getFullProof()));
       }
@@ -3041,7 +3049,7 @@ ReplicaImp::ReplicaImp(const LoadedReplicaData &ld,
                   s > ld.lastStableSeqNum ||                                        // not stable
                   e.isCheckpointMsgSet() ||                                         // if stable need to be set
                   ld.lastStableSeqNum == ld.lastExecutedSeqNum - kWorkWindowSize);  // after ST last executed may be on
-                                                                                    // the upper working window boundary
+    // the upper working window boundary
 
     if (!e.isCheckpointMsgSet()) continue;
 
@@ -3392,6 +3400,42 @@ void ReplicaImp::recoverRequests() {
     recoveringFromExecutionOfRequests = false;
     mapOfRequestsThatAreBeingRecovered = Bitmap();
   }
+}
+
+void ReplicaImp::executeNoConsensus(concordUtils::SpanWrapper &parent_span, ClientRequestMsg *request) {
+  ClientReplyMsg reply(currentPrimary(), request->requestSeqNum(), config_.replicaId);
+
+  uint16_t clientId = request->clientProxyId();
+  uint32_t actualReplyLength = 28;
+  uint32_t actualReplicaSpecificInfoLength = 7;
+
+  const auto *req_header = reinterpret_cast<const bftEngine::ClientRequestMsgHeader *>(request->body());
+  std::string reply_data = "reply";
+  auto reply_header_size = sizeof(bftEngine::ClientReplyMsgHeader);
+  reply.setReplyLength(reply_header_size + reply_data.size());
+  auto *reply_header = reinterpret_cast<bftEngine::ClientReplyMsgHeader *>(reply.body());
+  reply_header->currentPrimaryId = 0;
+  reply_header->msgType = REPLY_MSG_TYPE;
+  reply_header->replicaSpecificInfoLength = 0;
+  reply_header->replyLength = reply_data.size();
+  reply_header->reqSeqNum = req_header->reqSeqNum;
+  reply_header->spanContextSize = 0;
+
+  // Copy the reply data;
+  std::memcpy(reply.body() + reply_header_size, reply_data.data(), reply_data.size());
+
+  LOG_INFO(GL,
+           "Executed request without consensus. " << KVLOG(clientId,
+                                              lastExecutedSeqNum,
+                                              request->requestLength(),
+                                              request->getCid(),
+                                              reply.maxReplyLength(),
+                                              actualReplyLength,
+                                              actualReplicaSpecificInfoLength));
+
+  reply.setReplyLength(actualReplyLength);
+  reply.setReplicaSpecificInfoLength(actualReplicaSpecificInfoLength);
+  send(&reply, clientId);
 }
 
 void ReplicaImp::executeReadOnlyRequest(concordUtils::SpanWrapper &parent_span, ClientRequestMsg *request) {

@@ -33,7 +33,7 @@ uint32_t ReplicaConfigSerializer::maxSize(uint32_t numOfReplicas) {
           sizeof(config_->maxExternalMessageSize) + sizeof(config_->maxReplyMessageSize) +
           sizeof(config_->maxNumOfReservedPages) + sizeof(config_->sizeOfReservedPage) +
           sizeof(config_->debugPersistentStorageEnabled) + sizeof(config_->metricsDumpIntervalSeconds) +
-          sizeof(config_->keyExchangeOnStart));
+          sizeof(config_->keyExchangeOnStart) + sizeof(config_->poolPerfFlag));
 }
 
 ReplicaConfigSerializer::ReplicaConfigSerializer(ReplicaConfig *config) {
@@ -136,6 +136,8 @@ void ReplicaConfigSerializer::serializeDataMembers(ostream &outStream) const {
   outStream.write((char *)&config_->metricsDumpIntervalSeconds, sizeof(config_->metricsDumpIntervalSeconds));
 
   outStream.write((char *)&config_->keyExchangeOnStart, sizeof(config_->keyExchangeOnStart));
+
+  outStream.write((char *)&config_->poolPerfFlag, sizeof(config_->poolPerfFlag));
 }
 
 void ReplicaConfigSerializer::serializePointer(Serializable *ptrToClass, ostream &outStream) const {
@@ -172,7 +174,8 @@ bool ReplicaConfigSerializer::operator==(const ReplicaConfigSerializer &other) c
        (other.config_->maxNumOfReservedPages == config_->maxNumOfReservedPages) &&
        (other.config_->sizeOfReservedPage == config_->sizeOfReservedPage) &&
        (other.config_->metricsDumpIntervalSeconds == config_->metricsDumpIntervalSeconds) &&
-       (other.config_->keyExchangeOnStart == config_->keyExchangeOnStart));
+       (other.config_->keyExchangeOnStart == config_->keyExchangeOnStart) &&
+       (other.config_->poolPerfFlag == config_->poolPerfFlag));
   return result;
 }
 
@@ -262,6 +265,8 @@ void ReplicaConfigSerializer::deserializeDataMembers(istream &inStream) {
   inStream.read((char *)&config.metricsDumpIntervalSeconds, sizeof(config.metricsDumpIntervalSeconds));
 
   inStream.read((char *)&config.keyExchangeOnStart, sizeof(config.keyExchangeOnStart));
+
+  inStream.read((char *)&config.poolPerfFlag, sizeof(config.poolPerfFlag));
 }
 
 SerializablePtr ReplicaConfigSerializer::deserializePointer(std::istream &inStream) {

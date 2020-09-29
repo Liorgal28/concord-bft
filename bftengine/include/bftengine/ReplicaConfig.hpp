@@ -114,6 +114,7 @@ struct ReplicaConfig {
   uint64_t metricsDumpIntervalSeconds = 600;
 
   bool keyExchangeOnStart = false;
+  bool poolPerfFlag = false;
   /**
    * create a singleton instance from this object
    * call to this function will have effect only for the first time
@@ -146,7 +147,8 @@ inline std::ostream& operator<<(std::ostream& os, const ReplicaConfig& rc) {
      << "sizeOfReservedPage: " << rc.sizeOfReservedPage << "\n"
      << "debugStatisticsEnabled: " << rc.debugStatisticsEnabled << "\n"
      << "metricsDumpIntervalSeconds: " << rc.metricsDumpIntervalSeconds << "\n"
-     << "keyExchangeOnStart: " << rc.keyExchangeOnStart << "\n";
+     << "keyExchangeOnStart: " << rc.keyExchangeOnStart << "\n"
+     << "poolPerfFlag: " << rc.poolPerfFlag << "\n";
   return os;
 }
 
@@ -192,6 +194,7 @@ class ReplicaConfigSingleton {
   bool GetDebugStatisticsEnabled() const { return config_->debugStatisticsEnabled; }
 
   bool GetKeyExchangeOnStart() const { return config_->keyExchangeOnStart; }
+  bool GetPoolPerfFlag() const { return config_->poolPerfFlag; }
 
  private:
   friend struct ReplicaConfig;

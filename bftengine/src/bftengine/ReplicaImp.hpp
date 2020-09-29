@@ -335,6 +335,8 @@ class ReplicaImp : public InternalReplicaApi, public ReplicaForStateTransfer {
   void sendPreparePartial(SeqNumInfo&);
   void sendCommitPartial(SeqNum);  // TODO(GG): the argument should be a ref to SeqNumInfo
 
+  void executeNoConsensus(concordUtils::SpanWrapper& parent_span, ClientRequestMsg* m);
+
   void executeReadOnlyRequest(concordUtils::SpanWrapper& parent_span, ClientRequestMsg* m);
 
   void executeNextCommittedRequests(concordUtils::SpanWrapper& parent_span, const bool requestMissingInfo = false);
