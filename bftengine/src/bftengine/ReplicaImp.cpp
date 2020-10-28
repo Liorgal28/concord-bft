@@ -324,7 +324,7 @@ bool ReplicaImp::checkSendPrePrepareMsgPrerequisites() {
 
 void ReplicaImp::tryToSendPrePrepareMsg(bool batchingLogic) {
   if (!checkSendPrePrepareMsgPrerequisites()) return;
-
+  LOG_INFO(KEY_EX_LOG, "Lior1");
   // Remove duplicated requests that are result of client retrials from the head of the requestsQueueOfPrimary
   ClientRequestMsg *first = requestsQueueOfPrimary.front();
   while (first != nullptr &&
@@ -401,6 +401,7 @@ void ReplicaImp::startConsensusProcess(PrePrepareMsg *pp) {
   if (config_.debugStatisticsEnabled) {
     DebugStatistics::onSendPrePrepareMessage(pp->numberOfRequests(), requestsQueueOfPrimary.size());
   }
+  LOG_INFO(KEY_EX_LOG, "Lior2: " << pp->getCid());
   primaryLastUsedSeqNum++;
   metric_primary_last_used_seq_num_.Get().Set(primaryLastUsedSeqNum);
   SCOPED_MDC_SEQ_NUM(std::to_string(primaryLastUsedSeqNum));
@@ -3591,6 +3592,7 @@ void ReplicaImp::executeRequestsInPrePrepareMsg(concordUtils::SpanWrapper &paren
       uint32_t actualReplicaSpecificInfoLength = 0;
       int status;
       {
+        LOG_INFO(KEY_EX_LOG, "Lior3: " << ppMsg->getCid());
         TimeRecorder scoped_timer(*histograms_.executeWriteRequest);
         status = bftRequestsHandler_.execute(
             clientId,

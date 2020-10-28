@@ -92,6 +92,40 @@ PrePrepareMsg::PrePrepareMsg(ReplicaId sender,
   b()->numberOfRequests = 0;
   b()->seqNum = s;
   b()->viewNum = v;
+  std::memcpy(b()->cid, std::to_string(s).c_str() ,sizeof(b()->cid));
+
+  char* position = body() + sizeof(Header);
+  memcpy(position, spanContext.data().data(), b()->header.spanContextSize);
+}
+
+PrePrepareMsg::PrePrepareMsg(ReplicaId sender,
+                             ViewNum v,
+                             SeqNum s,
+                             CommitPath firstPath,
+                             const concordUtils::SpanContext& spanContext,
+                             size_t size,
+                             const std::string correlationID)
+    : MessageBase(sender,
+                  MsgCode::PrePrepare,
+                  spanContext.data().size(),
+                  (((size + sizeof(Header)) < maxMessageSize<PrePrepareMsg>())
+                   ? (size + sizeof(Header))
+                   : maxMessageSize<PrePrepareMsg>() - spanContext.data().size()))
+
+{
+  bool ready = size == 0;  // if null, then message is ready
+  if (!ready) {
+    b()->digestOfRequests.makeZero();
+  } else {
+    b()->digestOfRequests = nullDigest;
+  }
+
+  b()->endLocationOfLastRequest = payloadShift();
+  b()->flags = computeFlagsForPrePrepareMsg(ready, ready, firstPath);
+  b()->numberOfRequests = 0;
+  b()->seqNum = s;
+  b()->viewNum = v;
+  std::memcpy(b()->cid, correlationID.c_str() ,sizeof(b()->cid));
 
   char* position = body() + sizeof(Header);
   memcpy(position, spanContext.data().data(), b()->header.spanContextSize);
