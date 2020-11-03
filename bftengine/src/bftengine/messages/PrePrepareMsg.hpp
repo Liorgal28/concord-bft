@@ -34,7 +34,7 @@ class PrePrepareMsg : public MessageBase {
     ViewNum viewNum;
     SeqNum seqNum;
     uint16_t flags;
-    char cid[32];
+    char cid[8];
     Digest digestOfRequests;
 
     uint16_t numberOfRequests;
@@ -47,7 +47,7 @@ class PrePrepareMsg : public MessageBase {
     // 10 = SLOW) bits 4-15: zero
   };
 #pragma pack(pop)
-  static_assert(sizeof(Header) == (6 + 8 + 8 + 2 + DIGEST_SIZE + 2 + 4 + 32), "Header is 94B");
+  static_assert(sizeof(Header) == (6 + 8 + 8 + 2 + DIGEST_SIZE + 2 + 4 + 8), "Header is 70B");
 
   static const size_t prePrepareHeaderPrefix =
       sizeof(Header) - sizeof(Header::numberOfRequests) - sizeof(Header::endLocationOfLastRequest);
