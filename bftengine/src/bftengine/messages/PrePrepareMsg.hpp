@@ -34,7 +34,7 @@ class PrePrepareMsg : public MessageBase {
     ViewNum viewNum;
     SeqNum seqNum;
     uint16_t flags;
-    char cid[8];
+    uint64_t cid_length;
     Digest digestOfRequests;
 
     uint16_t numberOfRequests;
@@ -75,7 +75,7 @@ class PrePrepareMsg : public MessageBase {
                 CommitPath firstPath,
                 const concordUtils::SpanContext& spanContext,
                 size_t size,
-                const std::string correlationID);
+                const std::string& correlationID);
 
   BFTENGINE_GEN_CONSTRUCT_FROM_BASE_MESSAGE(PrePrepareMsg)
 
@@ -91,7 +91,7 @@ class PrePrepareMsg : public MessageBase {
 
   SeqNum seqNumber() const { return b()->seqNum; }
 
-  char* getCid() const { return b()->cid; }
+  std::string getCid() const { return std::string(body() + sizeof(Header) + spanContextSize(), b()->cid_length); }
 
   CommitPath firstPath() const;
 

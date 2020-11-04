@@ -3583,7 +3583,7 @@ void ReplicaImp::executeRequestsInPrePrepareMsg(concordUtils::SpanWrapper &paren
     } else {
       LOG_DEBUG(CNSUS, "Consensus reached");
     }
-
+    std::deque<IRequestsHandler::ExecutionRequest> accumulatedRequests;
     while (reqIter.getAndGoToNext(requestBody)) {
       size_t tmp = reqIdx;
       reqIdx++;
@@ -3600,22 +3600,40 @@ void ReplicaImp::executeRequestsInPrePrepareMsg(concordUtils::SpanWrapper &paren
 
       uint32_t actualReplyLength = 0;
       uint32_t actualReplicaSpecificInfoLength = 0;
+      int preExecutedResponse = 1;
       int status;
-      {
-        LOG_INFO(KEY_EX_LOG, "Lior3: " << ppMsg->getCid());
-        TimeRecorder scoped_timer(*histograms_.executeWriteRequest);
-        status = bftRequestsHandler_.execute(
+
+      // Accumulate pre-executed requests to the list
+      if (ReplicaConfig::instance().blockAccumulation) {
+        LOG_INFO(KEY_EX_LOG, "Lior3: " << ppMsg->getCid() << " accumulatedRequests: " << accumulatedRequests.size());
+        accumulatedRequests.push_front(IRequestsHandler::ExecutionRequest{
             clientId,
-            lastExecutedSeqNum + 1,
+            req.requestSeqNum(),
             req.flags(),
             req.requestLength(),
             req.requestBuf(),
-            ReplicaConfig::instance().getmaxReplyMessageSize() - sizeof(ClientReplyMsgHeader),
-            replyBuffer,
+            static_cast<uint32_t>(ReplicaConfig::instance().getmaxReplyMessageSize() - sizeof(ClientReplyMsgHeader)),
+            (char *)std::malloc(ReplicaConfig::instance().getmaxReplyMessageSize() - sizeof(ClientReplyMsgHeader)),
             actualReplyLength,
             actualReplicaSpecificInfoLength,
-            span);
-      }
+            preExecutedResponse,
+            span});
+        continue;
+      } else {
+        {
+          TimeRecorder scoped_timer(*histograms_.executeWriteRequest);
+          status = bftRequestsHandler_.execute(
+              clientId,
+              lastExecutedSeqNum + 1,
+              req.flags(),
+              req.requestLength(),
+              req.requestBuf(),
+              ReplicaConfig::instance().getmaxReplyMessageSize() - sizeof(ClientReplyMsgHeader),
+              replyBuffer,
+              actualReplyLength,
+              actualReplicaSpecificInfoLength,
+              span);
+        }
 
       ConcordAssertGT(actualReplyLength,
                       0);  // TODO(GG): TBD - how do we want to support empty replies? (actualReplyLength==0)
@@ -3632,6 +3650,31 @@ void ReplicaImp::executeRequestsInPrePrepareMsg(concordUtils::SpanWrapper &paren
       }
 
       clientsManager->removePendingRequestOfClient(clientId);
+    }
+  }
+    // Execute and send responses of pre-executed requests
+    if (!ReplicaConfig::instance().blockAccumulation) {
+      LOG_INFO(KEY_EX_LOG, "Lior4: " << ppMsg->getCid() << " accumulatedRequests: " << accumulatedRequests.size());
+      bftRequestsHandler_.execute(accumulatedRequests, std::to_string(lastExecutedSeqNum + 1));
+      for (auto it = accumulatedRequests.crbegin(); it != accumulatedRequests.crend(); ++it) {
+        if (it->outExecutionStatus != 0) {
+          LOG_INFO(KEY_EX_LOG, "LiorFail");
+          const auto requestSeqNum = it->sequenceNum;
+          LOG_WARN(CNSUS, "Request execution failed: " << KVLOG(it->clientId, requestSeqNum));
+        } else {
+          LOG_INFO(KEY_EX_LOG, "LiorSUC");
+          ClientReplyMsg *replyMsg = clientsManager->allocateNewReplyMsgAndWriteToStorage(
+              it->clientId, it->sequenceNum, currentPrimary(), it->outReply, it->outActualReplySize);
+          LOG_INFO(KEY_EX_LOG, "LiorSUC1");
+          replyMsg->setReplicaSpecificInfoLength(it->outReplicaSpecificInfoSize);
+          LOG_INFO(KEY_EX_LOG, "LiorSUC2");
+          send(replyMsg, it->clientId);
+          LOG_INFO(KEY_EX_LOG, "LiorSUC3");
+          delete replyMsg;
+          LOG_INFO(KEY_EX_LOG, "LiorSUC4");
+        }
+        clientsManager->removePendingRequestOfClient(it->clientId);
+      }
     }
   }
 

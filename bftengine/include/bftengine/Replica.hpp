@@ -73,6 +73,22 @@ class IRequestsHandler {
   virtual ~IRequestsHandler() {}
 
   virtual std::shared_ptr<ControlHandlers> getControlHandlers() = 0;
+
+  struct ExecutionRequest {
+    uint16_t clientId;
+    uint64_t sequenceNum;
+    uint8_t flags;
+    uint32_t requestSize;
+    const char *request;
+    uint32_t maxReplySize;
+    char *outReply;
+    uint32_t &outActualReplySize;
+    uint32_t &outReplicaSpecificInfoSize;
+    int &outExecutionStatus;
+    concordUtils::SpanWrapper &parent_span;
+  };
+
+  virtual void execute(std::deque<ExecutionRequest> &lis, std::string batchCID) = 0;
 };
 
 class IReplica {

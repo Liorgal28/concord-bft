@@ -40,6 +40,11 @@ int RequestHandler::execute(uint16_t clientId,
                                        parent_span);
 }
 
+void RequestHandler::execute(std::deque<ExecutionRequest> &lis, std::string batchCID) {
+  LOG_INFO(KEY_EX_LOG, "Lior28");
+  userRequestsHandler_->execute(lis, batchCID);
+};
+
 void RequestHandler::onFinishExecutingReadWriteRequests() {
   userRequestsHandler_->onFinishExecutingReadWriteRequests();
 }

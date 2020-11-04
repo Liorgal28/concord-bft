@@ -61,6 +61,8 @@ class InternalCommandsHandler : public concord::kvbc::ICommandsHandler {
                       uint32_t &outActualReplicaSpecificInfoSize,
                       concordUtils::SpanWrapper &span) override;
 
+  virtual void execute(std::deque<ExecutionRequest> &lis, std::string batchCID) override;
+
   void setControlStateManager(std::shared_ptr<bftEngine::ControlStateManager> controlStateManager) override;
 
  private:

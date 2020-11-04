@@ -130,6 +130,8 @@ class SimpleAppState : public IRequestsHandler {
     return 0;
   }
 
+  void execute(std::deque<ExecutionRequest> &lis, std::string batchCID) override{};
+
   struct State {
     // Number of modifications made.
     uint64_t stateNum = 0;

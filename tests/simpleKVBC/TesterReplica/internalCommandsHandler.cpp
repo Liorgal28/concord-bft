@@ -61,6 +61,9 @@ int InternalCommandsHandler::execute(uint16_t clientId,
   return res ? 0 : -1;
 }
 
+void InternalCommandsHandler::execute(std::deque<InternalCommandsHandler::ExecutionRequest> &lis,
+                                      std::string batchCID) {}
+
 void InternalCommandsHandler::addMetadataKeyValue(SetOfKeyValuePairs &updates, uint64_t sequenceNum) const {
   Sliver metadataKey = m_blockMetadata->getKey();
   Sliver metadataValue = m_blockMetadata->serialize(sequenceNum);

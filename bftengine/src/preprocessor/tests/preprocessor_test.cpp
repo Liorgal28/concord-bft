@@ -70,7 +70,7 @@ class DummyRequestsHandler : public IRequestsHandler {
     outActualReplySize = 256;
     return 0;
   }
-
+  void execute(std::deque<ExecutionRequest>& lis, std::string batchCID) override {}
   std::shared_ptr<ControlHandlers> getControlHandlers() override { return nullptr; }
 };
 

@@ -21,6 +21,8 @@ class RequestHandler : public IRequestsHandler {
 
   virtual std::shared_ptr<ControlHandlers> getControlHandlers() override;
 
+  virtual void execute(std::deque<ExecutionRequest> &lis, std::string batchCID) override;
+
  private:
   IRequestsHandler *const userRequestsHandler_ = nullptr;
 };

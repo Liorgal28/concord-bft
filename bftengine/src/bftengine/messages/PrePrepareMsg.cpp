@@ -75,8 +75,8 @@ PrePrepareMsg::PrePrepareMsg(ReplicaId sender,
     : MessageBase(sender,
                   MsgCode::PrePrepare,
                   spanContext.data().size(),
-                  (((size + sizeof(Header)) < maxMessageSize<PrePrepareMsg>())
-                       ? (size + sizeof(Header))
+                  (((size + sizeof(Header) + std::to_string(s).size()) < maxMessageSize<PrePrepareMsg>())
+                       ? (size + sizeof(Header) + std::to_string(s).size())
                        : maxMessageSize<PrePrepareMsg>() - spanContext.data().size()))
 
 {
@@ -92,10 +92,11 @@ PrePrepareMsg::PrePrepareMsg(ReplicaId sender,
   b()->numberOfRequests = 0;
   b()->seqNum = s;
   b()->viewNum = v;
-  std::memcpy(b()->cid, std::to_string(s).c_str() ,sizeof(b()->cid));
 
   char* position = body() + sizeof(Header);
   memcpy(position, spanContext.data().data(), b()->header.spanContextSize);
+  position += spanContext.data().size();
+  memcpy(position, std::to_string(s).data(), std::to_string(s).size());
 }
 
 PrePrepareMsg::PrePrepareMsg(ReplicaId sender,
@@ -104,13 +105,13 @@ PrePrepareMsg::PrePrepareMsg(ReplicaId sender,
                              CommitPath firstPath,
                              const concordUtils::SpanContext& spanContext,
                              size_t size,
-                             const std::string correlationID)
+                             const std::string& correlationID)
     : MessageBase(sender,
                   MsgCode::PrePrepare,
                   spanContext.data().size(),
-                  (((size + sizeof(Header)) < maxMessageSize<PrePrepareMsg>())
-                   ? (size + sizeof(Header))
-                   : maxMessageSize<PrePrepareMsg>() - spanContext.data().size()))
+                  (((size + sizeof(Header) + correlationID.size()) < maxMessageSize<PrePrepareMsg>())
+                       ? (size + sizeof(Header) + correlationID.size())
+                       : maxMessageSize<PrePrepareMsg>() - spanContext.data().size()))
 
 {
   bool ready = size == 0;  // if null, then message is ready
@@ -119,16 +120,17 @@ PrePrepareMsg::PrePrepareMsg(ReplicaId sender,
   } else {
     b()->digestOfRequests = nullDigest;
   }
-
+  b()->cid_length = correlationID.size();
   b()->endLocationOfLastRequest = payloadShift();
   b()->flags = computeFlagsForPrePrepareMsg(ready, ready, firstPath);
   b()->numberOfRequests = 0;
   b()->seqNum = s;
   b()->viewNum = v;
-  std::memcpy(b()->cid, correlationID.c_str() ,sizeof(b()->cid));
 
   char* position = body() + sizeof(Header);
   memcpy(position, spanContext.data().data(), b()->header.spanContextSize);
+  position += spanContext.data().size();
+  memcpy(position, correlationID.data(), correlationID.size());
 }
 
 uint32_t PrePrepareMsg::remainingSizeForRequests() const {
