@@ -34,7 +34,7 @@ class ReplicaImp : public IReplica,
                    public ILocalKeyValueStorageReadOnly,
                    public IBlocksAppender,
                    public IBlocksDeleter,
-                   public bftEngine::SimpleBlockchainStateTransfer::IAppState {
+                   public bftEngine::bcst::IAppState {
  public:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // IReplica implementation
@@ -71,8 +71,7 @@ class ReplicaImp : public IReplica,
   // IAppState implementation
   bool hasBlock(BlockId blockId) const override;
   bool getBlock(uint64_t blockId, char *outBlock, uint32_t *outBlockSize) override;
-  bool getPrevDigestFromBlock(uint64_t blockId,
-                              bftEngine::SimpleBlockchainStateTransfer::StateTransferDigest *) override;
+  bool getPrevDigestFromBlock(uint64_t blockId, bftEngine::bcst::StateTransferDigest *) override;
   bool putBlock(const uint64_t blockId, const char *block, const uint32_t blockSize) override;
   uint64_t getLastReachableBlockNum() const override { return m_bcDbAdapter->getLastReachableBlockId(); }
   uint64_t getLastBlockNum() const override { return m_bcDbAdapter->getLatestBlockId(); }
@@ -134,7 +133,7 @@ class ReplicaImp : public IReplica,
   std::unique_ptr<IDbAdapter> m_bcDbAdapter;
   std::shared_ptr<storage::IDBClient> m_metadataDBClient;
   bft::communication::ICommunication *m_ptrComm = nullptr;
-  bftEngine::ReplicaConfig m_replicaConfig;
+  const bftEngine::ReplicaConfig &replicaConfig_;
   bftEngine::IReplica::IReplicaPtr m_replicaPtr = nullptr;
   ICommandsHandler *m_cmdHandler = nullptr;
   bftEngine::IStateTransfer *m_stateTransfer = nullptr;

@@ -42,7 +42,7 @@ using concordMetrics::StatusHandle;
 using concordMetrics::GaugeHandle;
 using concordMetrics::CounterHandle;
 
-namespace bftEngine::SimpleBlockchainStateTransfer::impl {
+namespace bftEngine::bcst::impl {
 
 class BCStateTran : public IStateTransfer {
  public:
@@ -131,6 +131,9 @@ class BCStateTran : public IStateTransfer {
   // random generator
   std::random_device randomDevice_;
   std::mt19937 randomGen_;
+
+  // get ST client or ST server logger according to getFetchingState()
+  logging::Logger& getLogger() const { return (psd_->getIsFetchingState() ? ST_DST_LOG : ST_SRC_LOG); }
 
   ///////////////////////////////////////////////////////////////////////////
   // Unique message IDs
@@ -399,4 +402,4 @@ class BCStateTran : public IStateTransfer {
   concord::util::CallbackRegistry<uint64_t> on_transferring_complete_cb_registry_;
 };
 
-}  // namespace bftEngine::SimpleBlockchainStateTransfer::impl
+}  // namespace bftEngine::bcst::impl

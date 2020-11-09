@@ -24,17 +24,22 @@ class PreProcessReplyMsg : public MessageBase {
   PreProcessReplyMsg(bftEngine::impl::SigManagerSharedPtr sigManager,
                      NodeIdType senderId,
                      uint16_t clientId,
-                     uint64_t reqSeqNum);
+                     uint64_t reqSeqNum,
+                     uint64_t reqRetryId);
+
+  BFTENGINE_GEN_CONSTRUCT_FROM_BASE_MESSAGE(PreProcessReplyMsg)
 
   void setupMsgBody(const char* buf, uint32_t bufLen, const std::string& cid, ReplyStatus status);
 
   void validate(const bftEngine::impl::ReplicasInfo&) const override;
   const uint16_t clientId() const { return msgBody()->clientId; }
   const SeqNum reqSeqNum() const { return msgBody()->reqSeqNum; }
+  const uint64_t reqRetryId() const { return msgBody()->reqRetryId; }
   const uint32_t replyLength() const { return msgBody()->replyLength; }
   const uint8_t* resultsHash() const { return msgBody()->resultsHash; }
   const uint8_t status() const { return msgBody()->status; }
   std::string getCid() const;
+  void setSigManager(bftEngine::impl::SigManagerSharedPtr sigManager) { sigManager_ = sigManager; }
 
  protected:
 #pragma pack(push, 1)
@@ -47,6 +52,7 @@ class PreProcessReplyMsg : public MessageBase {
     uint8_t resultsHash[concord::util::SHA3_256::SIZE_IN_BYTES];
     uint32_t replyLength;
     uint32_t cidLength;
+    uint64_t reqRetryId;
   };
 // The pre-executed results' hash signature resides in the message body
 #pragma pack(pop)
@@ -56,7 +62,7 @@ class PreProcessReplyMsg : public MessageBase {
     static logging::Logger logger_ = logging::getLogger("concord.preprocessor");
     return logger_;
   }
-  void setParams(NodeIdType senderId, uint16_t clientId, ReqId reqSeqNum);
+  void setParams(NodeIdType senderId, uint16_t clientId, ReqId reqSeqNum, uint64_t reqRetryId);
   Header* msgBody() const { return ((Header*)msgBody_); }
 
  private:

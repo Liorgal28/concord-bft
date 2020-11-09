@@ -109,7 +109,7 @@ MessageBase::MessageBase(NodeIdType sender, MessageBase::Header *body, MsgSize s
 }
 
 void MessageBase::validate(const ReplicasInfo &) const {
-  LOG_WARN(GL, "Calling MessageBase::validate on a message of type " << type());
+  LOG_DEBUG(GL, "Calling MessageBase::validate on a message of type " << type());
 }
 
 void MessageBase::setMsgSize(MsgSize size) {
@@ -170,7 +170,7 @@ MessageBase *MessageBase::createObjAndMsgFromLocalBuffer(char *buffer, size_t bu
   RawHeaderOfObjAndMsg *pHeader = (RawHeaderOfObjAndMsg *)buffer;
   if (pHeader->magicNum != magicNumOfRawFormat) return nullptr;
   if (pHeader->msgSize == 0) return nullptr;
-  if (pHeader->msgSize > ReplicaConfigSingleton::GetInstance().GetMaxExternalMessageSize()) return nullptr;
+  if (pHeader->msgSize > ReplicaConfig::instance().getmaxExternalMessageSize()) return nullptr;
   if (pHeader->msgSize + sizeof(RawHeaderOfObjAndMsg) > bufferLength) return nullptr;
 
   char *pBodyInBuffer = buffer + sizeof(RawHeaderOfObjAndMsg);

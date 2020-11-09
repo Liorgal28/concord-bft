@@ -30,12 +30,12 @@ set(corebft_source_files
     src/bftengine/PersistentStorageWindows.cpp
     src/bftengine/DebugPersistentStorage.cpp
     src/bftengine/ReplicaLoader.cpp
-    src/bftengine/ReplicaConfigSerializer.cpp
     src/bftengine/SerializableActiveWindow.cpp
     src/bftengine/MsgsCommunicator.cpp
     src/bftengine/MsgReceiver.cpp
     src/bftengine/DbMetadataStorage.cpp
     src/bftengine/RequestsBatchingLogic.cpp
+    src/bftengine/ReplicaStatusHandlers.cpp
     src/bcstatetransfer/BCStateTran.cpp
     src/bcstatetransfer/InMemoryDataStore.cpp
     src/bcstatetransfer/STDigest.cpp
@@ -58,7 +58,7 @@ set(corebft_source_files
     src/bftengine/messages/ViewChangeMsg.cpp
     src/bftengine/messages/ReplicaStatusMsg.cpp
     src/bftengine/messages/StateTransferMsg.cpp
-    src/bftengine/messages/ReplicaAsksToLeaveView.cpp
+    src/bftengine/messages/ReplicaAsksToLeaveViewMsg.cpp
     src/bftengine/KeyManager.cpp
     src/bftengine/RequestHandler.cpp
     src/bftengine/ControlStateManager.cpp

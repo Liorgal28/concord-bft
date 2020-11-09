@@ -53,7 +53,7 @@ class SkvbcChaosTest(unittest.TestCase):
     __test__ = False  # so that PyTest ignores this test scenario
 
     @with_trio
-    @with_bft_network(start_replica_cmd)
+    @with_bft_network(start_replica_cmd, rotate_keys=True)
     @verify_linearizability()
     async def test_healthy(self, bft_network, tracker,exchange_keys=True):
         """
@@ -61,8 +61,6 @@ class SkvbcChaosTest(unittest.TestCase):
         linearizability. The system is healthy and stable and no faults are
         intentionally generated.
         """
-        if exchange_keys:
-            await bft_network.do_key_exchange()
         num_ops = 500
 
         self.skvbc = kvbc.SimpleKVBCProtocol(bft_network)
@@ -71,15 +69,14 @@ class SkvbcChaosTest(unittest.TestCase):
         await tracker.run_concurrent_ops(num_ops)
 
     @with_trio
-    @with_bft_network(start_replica_cmd)
+    @with_bft_network(start_replica_cmd, rotate_keys=True)
     @verify_linearizability()
     async def test_wreak_havoc(self, bft_network, tracker):
         """
-        Run a bunch of concurrrent requests in batches and verify
+        Run a bunch of concurrent requests in batches and verify
         linearizability. In this test we generate faults periodically and verify
         linearizability at the end of the run.
         """
-        await bft_network.do_key_exchange()
         num_ops = 500
 
         self.skvbc = kvbc.SimpleKVBCProtocol(bft_network)
