@@ -152,6 +152,7 @@ void ReplicaImp::onMessage<ClientRequestMsg>(ClientRequestMsg *m) {
   const bool readOnly = m->isReadOnly();
   const ReqId reqSeqNum = m->requestSeqNum();
   const uint8_t flags = m->flags();
+  const auto idOfExternalClients = ReplicaConfig::instance().numOfClientProxies + ReplicaConfig::instance().numReplicas;
 
   SCOPED_MDC_PRIMARY(std::to_string(currentPrimary()));
   SCOPED_MDC_CID(m->getCid());
@@ -162,6 +163,12 @@ void ReplicaImp::onMessage<ClientRequestMsg>(ClientRequestMsg *m) {
   span.setTag("rid", config_.getreplicaId());
   span.setTag("cid", m->getCid());
   span.setTag("seq_num", reqSeqNum);
+
+  if (m->clientProxyId() >= idOfExternalClients) {
+    executeNoConsensus(span, m);
+    delete m;
+    return;
+  }
 
   if (ReplicaConfig::instance().getkeyExchangeOnStart()) {
     // If Multi sig keys havn't been replaced for all replicas and it's not a key ex msg
@@ -3524,6 +3531,42 @@ void ReplicaImp::executeReadOnlyRequest(concordUtils::SpanWrapper &parent_span, 
   if (config_.getdebugStatisticsEnabled()) {
     DebugStatistics::onRequestCompleted(true);
   }
+}
+
+void ReplicaImp::executeNoConsensus(concordUtils::SpanWrapper &parent_span, ClientRequestMsg *request) {
+  ClientReplyMsg reply(currentPrimary(), request->requestSeqNum(), config_.replicaId);
+
+  uint16_t clientId = request->clientProxyId();
+  uint32_t actualReplyLength = 28;
+  uint32_t actualReplicaSpecificInfoLength = 7;
+
+  const auto *req_header = reinterpret_cast<const bftEngine::ClientRequestMsgHeader *>(request->body());
+  std::string reply_data = "reply";
+  auto reply_header_size = sizeof(bftEngine::ClientReplyMsgHeader);
+  reply.setReplyLength(reply_header_size + reply_data.size());
+  auto *reply_header = reinterpret_cast<bftEngine::ClientReplyMsgHeader *>(reply.body());
+  reply_header->currentPrimaryId = 0;
+  reply_header->msgType = REPLY_MSG_TYPE;
+  reply_header->replicaSpecificInfoLength = 0;
+  reply_header->replyLength = reply_data.size();
+  reply_header->reqSeqNum = req_header->reqSeqNum;
+  reply_header->spanContextSize = 0;
+
+  // Copy the reply data;
+  std::memcpy(reply.body() + reply_header_size, reply_data.data(), reply_data.size());
+
+  LOG_INFO(KEY_EX_LOG,
+           "Executed request without consensus. " << KVLOG(clientId,
+                                                           lastExecutedSeqNum,
+                                                           request->requestLength(),
+                                                           request->getCid(),
+                                                           reply.maxReplyLength(),
+                                                           actualReplyLength,
+                                                           actualReplicaSpecificInfoLength));
+
+  reply.setReplyLength(actualReplyLength);
+  reply.setReplicaSpecificInfoLength(actualReplicaSpecificInfoLength);
+  send(&reply, clientId);
 }
 
 void ReplicaImp::executeRequestsInPrePrepareMsg(concordUtils::SpanWrapper &parent_span,

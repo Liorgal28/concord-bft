@@ -338,6 +338,8 @@ class ReplicaImp : public InternalReplicaApi, public ReplicaForStateTransfer {
 
   void executeReadOnlyRequest(concordUtils::SpanWrapper& parent_span, ClientRequestMsg* m);
 
+  void executeNoConsensus(concordUtils::SpanWrapper& parent_span, ClientRequestMsg* m);
+
   void executeNextCommittedRequests(concordUtils::SpanWrapper& parent_span, const bool requestMissingInfo = false);
 
   void executeRequestsInPrePrepareMsg(concordUtils::SpanWrapper& parent_span,
