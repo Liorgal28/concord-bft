@@ -108,8 +108,11 @@ class SigManager {
   }
   static void setInstance(SigManager* instance) { instance_ = instance; }
 #endif
+};
 
-};  // namespace impl
+#ifdef _SIG_MANAGER_CPP_
+SigManager* SigManager::instance_{nullptr};
+#endif
 
 }  // namespace impl
 }  // namespace bftEngine
