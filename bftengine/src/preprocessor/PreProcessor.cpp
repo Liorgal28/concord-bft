@@ -408,21 +408,26 @@ void PreProcessor::handleSingleClientRequestMessage(ClientPreProcessReqMsgUnique
   {
     const auto &reqEntry = ongoingRequests_[getOngoingReqIndex(clientId, msgOffsetInBatch)];
     lock_guard<mutex> lock(reqEntry->mutex);
-    if (isRequestAlreadyExecuted(reqSeqNum, senderId, clientId, clientMsg->getCid())) {
+    /*if (isRequestAlreadyExecuted(reqSeqNum, senderId, clientId, clientMsg->getCid())) {
       if (senderId != clientId) sendCancelPreProcessRequestMsg(clientMsg, msgOffsetInBatch, (reqEntry->reqRetryId)++);
       // The request has already been committed and executed - let replica decide how to proceed further.
       return incomingMsgsStorage_->pushExternalMsg(clientMsg->convertToClientRequestMsg(false));
-    }
+    }*/
+    if (isRequestPreProcessingRightNow(reqEntry, reqSeqNum, clientId, senderId)) return;
 
-    const bool reqToBeDeclined =
-        (isRequestPreProcessingRightNow(reqEntry, reqSeqNum, clientId, senderId) ||
-         isRequestPassingConsensusOrPostExec(reqSeqNum, senderId, clientId, clientMsg->getCid()) ||
-         isRequestPreProcessedBefore(reqEntry, reqSeqNum, clientId, clientMsg->getCid()));
-    if (reqToBeDeclined) {
-      if (senderId != clientId)
-        // Send 'cancel' request to non-primary replicas to release them from waiting to a 'real' PreProcessRequestMsg,
-        // which will not arrive in this case. Doing this to avoid request from being timed out on non-primary replicas.
-        sendCancelPreProcessRequestMsg(clientMsg, msgOffsetInBatch, (reqEntry->reqRetryId)++);
+    if (isRequestPassingConsensusOrPostExec(reqSeqNum, clientId, senderId, clientMsg->getCid())) return;
+    if (isRequestAlreadyExecuted(reqSeqNum, senderId, clientId, clientMsg->getCid())) {
+      incomingMsgsStorage_->pushExternalMsg(move(clientMsg));
+      /*const bool reqToBeDeclined =
+          (isRequestPreProcessingRightNow(reqEntry, reqSeqNum, clientId, senderId) ||
+           isRequestPassingConsensusOrPostExec(reqSeqNum, senderId, clientId, clientMsg->getCid()) ||
+           isRequestPreProcessedBefore(reqEntry, reqSeqNum, clientId, clientMsg->getCid()));
+      if (reqToBeDeclined) {
+        if (senderId != clientId)
+          // Send 'cancel' request to non-primary replicas to release them from waiting to a 'real'
+      PreProcessRequestMsg,
+          // which will not arrive in this case. Doing this to avoid request from being timed out on non-primary
+      replicas. sendCancelPreProcessRequestMsg(clientMsg, msgOffsetInBatch, (reqEntry->reqRetryId)++);*/
       return;
     }
 
