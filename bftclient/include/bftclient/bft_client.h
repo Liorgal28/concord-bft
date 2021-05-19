@@ -92,6 +92,7 @@ class Client {
 
   std::unique_ptr<bft::communication::ICommunication> communication_;
   ClientConfig config_;
+  size_t batch_size_ = 0;
   logging::Logger logger_ = logging::getLogger("bftclient");
   std::deque<Msg> pending_requests_;
   std::unordered_map<uint64_t, Matcher> reply_certificates_;
