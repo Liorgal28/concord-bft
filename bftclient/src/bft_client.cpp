@@ -224,12 +224,14 @@ Reply Client::send(const MatchConfig& match_config,
 
 SeqNumToReplyMap Client::sendBatch(std::deque<WriteRequest>& write_requests, const std::string& cid) {
   SeqNumToReplyMap replies;
+  std::deque<WriteRequest> write_requests1;
   std::chrono::milliseconds max_time_to_wait = 0s;
   MatchConfig match_config = writeConfigToMatchConfig(write_requests.front().config);
   auto batch_msg = initBatch(write_requests, cid, max_time_to_wait);
   auto start = std::chrono::steady_clock::now();
   auto end = start + max_time_to_wait;
-  while (std::chrono::steady_clock::now() < end && replies.size() != pending_requests_.size()) {
+  batch_size_ = write_requests.size();
+  while (std::chrono::steady_clock::now() < end && replies.size() != batch_size_) {
     bft::client::Msg msg(batch_msg);  // create copy here due to the loop
     if (primary_) {
       communication_->send(primary_.value().val, std::move(msg));
@@ -243,9 +245,18 @@ SeqNumToReplyMap Client::sendBatch(std::deque<WriteRequest>& write_requests, con
 
     wait(replies);
     metrics_.retransmissions.Get().Inc();
+    if (replies.size() != batch_size_) {
+      for (const auto& req : write_requests) {
+        if (replies.find(req.config.request.sequence_number) == replies.end()) write_requests1.push_back(req);
+      }
+      pending_requests_.clear();
+      match_config = writeConfigToMatchConfig(write_requests1.front().config);
+      batch_msg = initBatch(write_requests1, cid, max_time_to_wait);
+      write_requests1.clear();
+    }
   }
   reply_certificates_.clear();
-  if (replies.size() == pending_requests_.size()) {
+  if (replies.size() == batch_size_) {
     expected_commit_time_ms_.add(
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count());
     pending_requests_.clear();
@@ -285,7 +296,7 @@ void Client::wait(SeqNumToReplyMap& replies) {
     for (auto&& reply : unmatched_requests) {
       auto request = reply_certificates_.find(reply.metadata.seq_num);
       if (request == reply_certificates_.end()) continue;
-      if (pending_requests_.size() > 0 && replies.size() == pending_requests_.size()) return;
+      if (pending_requests_.size() > 0 && replies.size() == batch_size_) return;
       if (auto match = request->second.onReply(std::move(reply))) {
         primary_ = request->second.getPrimary();
         replies.insert(std::make_pair(request->first, match->reply));
