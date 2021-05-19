@@ -109,7 +109,7 @@ class Client {
 
   // A utility for calculating dynamic timeouts for replies.
   bftEngine::impl::DynamicUpperLimitWithSimpleFilter<uint64_t> expected_commit_time_ms_;
-
+  std::chrono::steady_clock::time_point start_time_;
   Metrics metrics_;
 
   // Transaction RSA signer

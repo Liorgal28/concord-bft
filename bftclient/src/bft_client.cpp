@@ -259,6 +259,8 @@ SeqNumToReplyMap Client::sendBatch(std::deque<WriteRequest>& write_requests, con
   if (replies.size() == batch_size_) {
     expected_commit_time_ms_.add(
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count());
+    metrics_.batchCompleteTime.Get().Set(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time_).count());
     pending_requests_.clear();
     return replies;
   }
@@ -301,6 +303,7 @@ void Client::wait(SeqNumToReplyMap& replies) {
         primary_ = request->second.getPrimary();
         replies.insert(std::make_pair(request->first, match->reply));
         reply_certificates_.erase(request->first);
+        if (replies.size() / batch_size_ >= 0.9) start_time_ = std::chrono::steady_clock::now();
       }
     }
   }

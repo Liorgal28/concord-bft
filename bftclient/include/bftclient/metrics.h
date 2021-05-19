@@ -22,6 +22,7 @@ struct Metrics {
         retransmissions{component_.RegisterCounter("retransmissions")},
         transactionSigning{component_.RegisterCounter("transactionSigning")},
         retransmissionTimer{component_.RegisterGauge("retransmissionTimer", 0)},
+        batchCompleteTime{component_.RegisterGauge("batchCompleteTime", 0)},
         repliesCleared{component_.RegisterCounter("repliesCleared", 0)} {
     component_.Register();
   }
@@ -39,6 +40,7 @@ struct Metrics {
   concordMetrics::CounterHandle retransmissions;
   concordMetrics::CounterHandle transactionSigning;
   concordMetrics::GaugeHandle retransmissionTimer;
+  concordMetrics::GaugeHandle batchCompleteTime;
   concordMetrics::CounterHandle repliesCleared;
 };
 
