@@ -1144,7 +1144,7 @@ void AsyncPreProcessJob::execute() {
 }
 
 void AsyncPreProcessJob::release() {
-  const auto durationInNano = time_recorder_.wrapUpRecording();
+  const auto durationInNano = (float)time_recorder_.wrapUpRecording();
   preProcessor_.totalPreProcessingTime_.add((double)(durationInNano / 1000000));
   preProcessor_.preProcessorMetrics_.preProcessingTimeAvg.Get().Set(
       (uint64_t)preProcessor_.totalPreProcessingTime_.avg());

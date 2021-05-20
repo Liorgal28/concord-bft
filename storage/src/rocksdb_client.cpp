@@ -131,7 +131,7 @@ void Client::initDBFromFile(bool readOnly, const Options &user_options) {
     throw std::invalid_argument{msg};
   }
   // Add specific global options
-  db_options.IncreaseParallelism(static_cast<int>(std::thread::hardware_concurrency()));
+  db_options.IncreaseParallelism(16);
   db_options.sst_file_manager.reset(::rocksdb::NewSstFileManager(::rocksdb::Env::Default()));
   db_options.statistics = ::rocksdb::CreateDBStatistics();
   db_options.statistics->set_stats_level(::rocksdb::StatsLevel::kExceptTimeForMutex);
