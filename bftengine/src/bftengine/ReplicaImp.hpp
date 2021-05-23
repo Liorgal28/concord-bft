@@ -514,6 +514,7 @@ class ReplicaImp : public InternalReplicaApi, public ReplicaForStateTransfer {
 
     // Only updated by the primary
     DEFINE_SHARED_RECORDER(consensus, 1, MAX_VALUE_MICROSECONDS, 3, Unit::MICROSECONDS);
+    DEFINE_SHARED_RECORDER(full_consensus, 1, MAX_VALUE_MICROSECONDS, 3, Unit::MICROSECONDS);
 
     DEFINE_SHARED_RECORDER(timeInActiveView, 1, MAX_VALUE_SECONDS, 3, Unit::SECONDS);
     DEFINE_SHARED_RECORDER(timeInStateTransfer, 1, MAX_VALUE_SECONDS, 3, Unit::SECONDS);
@@ -525,6 +526,7 @@ class ReplicaImp : public InternalReplicaApi, public ReplicaForStateTransfer {
   // Used to measure the time for each consensus slot to go from pre-prepare to commit at the primary.
   // Time is recorded in histograms_.consensus
   concord::diagnostics::AsyncTimeRecorderMap<SeqNum> consensus_times_;
+  concord::diagnostics::AsyncTimeRecorderMap<SeqNum> full_batch_consensus_times_;
   concord::diagnostics::AsyncTimeRecorderMap<SeqNum> checkpoint_times_;
 
   concord::diagnostics::AsyncTimeRecorder<false> time_in_active_view_;

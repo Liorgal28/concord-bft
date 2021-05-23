@@ -533,6 +533,8 @@ void ReplicaImp::startConsensusProcess(PrePrepareMsg *pp, bool isInternalNoop) {
                                           << " correlation ids: " << pp->getBatchCorrelationIdAsString()
                                           << ", commit path: " << CommitPathToStr(firstPath));
     consensus_times_.start(primaryLastUsedSeqNum);
+    if (pp->numberOfRequests() == config_.getmaxNumOfRequestsInBatch())
+      full_batch_consensus_times_.start(primaryLastUsedSeqNum);
   }
 
   SeqNumInfo &seqNumInfo = mainLog->get(primaryLastUsedSeqNum);
@@ -2470,6 +2472,7 @@ void ReplicaImp::onNewView(const std::vector<PrePrepareMsg *> &prePreparesForNew
 
   time_in_active_view_.start();
   consensus_times_.clear();
+  full_batch_consensus_times_.clear();
 
   if (!prePreparesForNewView.empty()) {
     firstPPSeq = prePreparesForNewView.front()->seqNumber();
@@ -3606,6 +3609,7 @@ ReplicaImp::ReplicaImp(bool firstTime,
       metric_total_fastPath_requests_{metrics_.RegisterCounter("totalFastPathRequests")},
       metric_total_preexec_requests_executed_{metrics_.RegisterCounter("totalPreExecRequestsExecuted")},
       consensus_times_(histograms_.consensus),
+      full_batch_consensus_times_(histograms_.full_consensus),
       checkpoint_times_(histograms_.checkpointFromCreationToStable),
       time_in_active_view_(histograms_.timeInActiveView),
       time_in_state_transfer_(histograms_.timeInStateTransfer),
@@ -4157,6 +4161,7 @@ void ReplicaImp::executeNextCommittedRequests(concordUtils::SpanWrapper &parent_
   ConcordAssertGE(lastExecutedSeqNum, lastStableSeqNum);
   auto span = concordUtils::startChildSpan("bft_execute_next_committed_requests", parent_span);
   consensus_times_.end(seqNumber);
+  full_batch_consensus_times_.end(seqNumber);
   // First of all, we remove the pending request before the execution, to prevent long execution from affecting VC
   tryToRemovePendingRequestsForSeqNum(seqNumber);
 
