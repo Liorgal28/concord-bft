@@ -62,7 +62,7 @@ inline std::string readline(int sock) {
     }
     if (rv < 0 && errno == EINTR) continue;
     if (rv < 0) {
-      throw std::runtime_error("diagnostics server readline select failed: " + errnoString(rv));
+      throw std::runtime_error("diagnostics server readline select failed: " + errnoString(errno));
     }
 
     if (count == MAX_INPUT_SIZE) {
@@ -85,6 +85,7 @@ inline std::string readline(int sock) {
     auto end = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     remaining = timeout - duration;
+    if (remaining.count() < 0) throw std::runtime_error("timeout");
   }
 }
 
