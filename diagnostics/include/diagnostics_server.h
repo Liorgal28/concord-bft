@@ -62,7 +62,7 @@ inline std::string readline(int sock) {
     }
     if (rv < 0 && errno == EINTR) continue;
     if (rv < 0) {
-      throw std::runtime_error("diagnostics server readline select failed: " + errnoString(rv));
+      throw std::runtime_error("diagnostics server readline select failed: ");
     }
 
     if (count == MAX_INPUT_SIZE) {
@@ -71,7 +71,7 @@ inline std::string readline(int sock) {
 
     rv = read(sock, buf.data() + count, buf.size() - count);
     if (rv <= 0) {
-      throw std::runtime_error("diagnostics server read failed: " + errnoString(rv));
+      throw std::runtime_error("diagnostics server read failed: ");
     }
     count += rv;
 
@@ -85,6 +85,7 @@ inline std::string readline(int sock) {
     auto end = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     remaining = timeout - duration;
+    if (remaining.count() < 0) throw std::runtime_error("timeout");
   }
 }
 
@@ -99,13 +100,13 @@ inline void handleRequest(Registrar& registrar, int sock) {
     }
     std::string output = run(tokens, registrar);
     if (write(sock, output.data(), output.size()) < 0) {
-      LOG_WARN(logger, "Failed to write to client socket: " << errnoString(errno));
+      LOG_WARN(logger, "Failed to write to client socket: ");
     }
     close(sock);
   } catch (const std::exception& e) {
     std::string out = std::string("Error: ") + e.what() + "\n";
     if (write(sock, out.data(), out.size()) < 0) {
-      LOG_WARN(logger, "Failed to write to client socket: " << errnoString(errno));
+      LOG_WARN(logger, "Failed to write to client socket: ");
     }
     close(sock);
   }
@@ -148,13 +149,12 @@ class Server {
           continue;
         }
         if (rv < 0) {
-          LOG_ERROR(logger,
-                    "Error while waiting for new client request, shutting down the server: " << errnoString(errno));
+          LOG_ERROR(logger, "Error while waiting for new client request, shutting down the server: ");
           return;
         }
         int sock = accept(listen_sock_, NULL, NULL);
         if (sock < 0) {
-          LOG_WARN(logger, "Failed to accept connection: " << errnoString(errno));
+          LOG_WARN(logger, "Failed to accept connection: ");
           continue;
         }
         handleRequest(registrar, sock);
@@ -184,15 +184,15 @@ class Server {
     servaddr_.sin_port = htons(port);
     int enable = 1;
     if (setsockopt(listen_sock_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable))) {
-      LOG_ERROR(logger, "Failed to set listen socket options: " << errnoString(errno));
+      LOG_ERROR(logger, "Failed to set listen socket options: ");
       return -1;
     }
     if (bind(listen_sock_, (sockaddr*)&servaddr_, sizeof(servaddr_))) {
-      LOG_ERROR(logger, "Failed to bind listen socket: " << errnoString(errno));
+      LOG_ERROR(logger, "Failed to bind listen socket: ");
       return -1;
     }
     if (::listen(listen_sock_, BACKLOG)) {
-      LOG_ERROR(logger, "Failed to listen for connections: " << errnoString(errno));
+      LOG_ERROR(logger, "Failed to listen for connections: ");
       return -1;
     }
     LOG_INFO(logger, "Diagnostics server listening on port " << port);

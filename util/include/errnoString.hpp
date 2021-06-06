@@ -19,7 +19,7 @@ namespace concordUtils {
 
 // Thread-safe errno string generation.
 inline std::string errnoString(int errNum) {
-  constexpr auto size = 128 + 1;
+  constexpr auto size = 256 + 1;
   char buf[size];
 #ifdef _GNU_SOURCE
   const auto ret = strerror_r(errNum, buf, size);
