@@ -1,0 +1,21 @@
+# Copyright 2021 VMware, all rights reserved
+# Dockerfile for building an example application around the BFT Client Pool library
+
+FROM athena-docker-local.artifactory.eng.vmware.com/concord-core:prereqs-v36
+LABEL Description="External Client Pool"
+
+COPY ./concord /concord
+COPY ./communication/src/main/proto /communication/src/main/proto
+
+RUN ln -s /usr/bin/llvm-symbolizer-7 /usr/bin/llvm-symbolizer
+
+WORKDIR /concord/build
+RUN cmake \
+      -DCMAKE_C_COMPILER=/usr/bin/clang-7 \
+      -DCMAKE_CXX_COMPILER=/usr/bin/clang++-7 \
+      -DCMAKE_CXX_FLAGS=" -g -fPIE -O1 -fsanitize=address -fno-omit-frame-pointer" \
+      -DCMAKE_EXE_LINKER_FLAGS=" -g -pie -fsanitize=address" \
+      .. && \
+    make -j${nproc} client-pool-example
+
+WORKDIR /concord/build/src/external_client/example/
