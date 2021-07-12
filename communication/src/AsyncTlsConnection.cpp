@@ -155,15 +155,17 @@ void AsyncTlsConnection::startWriteTimer() {
   write_timer_.expires_from_now(WRITE_TIMEOUT);
   status_.write_timer_started++;
   write_timer_.async_wait(asio::bind_executor(strand_, [this, self](const asio::error_code& ec) {
-    if (ec == asio::error::operation_aborted || disposed_) {
-      // The socket has already been cleaned up and any references are invalid. Just return.
-      LOG_DEBUG(logger_, "Operation aborted: " << KVLOG(peer_id_.value(), disposed_));
-      status_.write_timer_stopped++;
-      return;
+    if (ec) {
+      if (ec == asio::error::operation_aborted || disposed_) {
+        // The socket has already been cleaned up and any references are invalid. Just return.
+        LOG_DEBUG(logger_, "Operation aborted: " << KVLOG(peer_id_.value(), disposed_));
+        status_.write_timer_stopped++;
+        return;
+      }
+      LOG_WARN(logger_, "Write timeout to node " << peer_id_.value() << ": " << ec.message());
+      status_.write_timer_expired++;
+      dispose();
     }
-    LOG_WARN(logger_, "Write timeout to node " << peer_id_.value() << ": " << ec.message());
-    status_.write_timer_expired++;
-    dispose();
   }));
 }
 

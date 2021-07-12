@@ -460,20 +460,21 @@ void PreProcessor::onMessage<ClientBatchRequestMsg>(ClientBatchRequestMsg *msg) 
   uint16_t offset = 0;
   for (auto it = clientMsgs.begin(); it != clientMsgs.end(); ++it) {
     auto &clientMsg = *it;
-    LOG_DEBUG(logger(),
-              "Start handling single message from the batch:" << KVLOG(clientMsg->requestSeqNum(),
-                                                                       clientMsg->getCid(),
-                                                                       senderId,
-                                                                       clientId,
-                                                                       clientMsg->requestTimeoutMilli(),
-                                                                       clientMsg->requestSignatureLength()));
+    LOG_INFO(logger(),
+             "Start handling single message from the batch:" << KVLOG(cid,
+                                                                      clientMsg->requestSeqNum(),
+                                                                      clientMsg->getCid(),
+                                                                      senderId,
+                                                                      clientId,
+                                                                      clientMsg->requestTimeoutMilli(),
+                                                                      clientMsg->requestSignatureLength()));
     preProcessorMetrics_.preProcReqReceived.Get().Inc();
     // senderId should be taken from ClientBatchRequestMsg as it does not get re-set in batched client messages
     handleSingleClientRequestMessage(move(clientMsg), senderId, true, offset++);
   }
   if (!myReplica_.isCurrentPrimary()) {
     sendMsg(clientBatch->body(), myReplica_.currentPrimary(), clientBatch->type(), clientBatch->size());
-    LOG_DEBUG(logger(), "Sent ClientBatchRequestMsg" << KVLOG(senderId, clientId, cid) << " to the current primary");
+    LOG_INFO(logger(), "Sent ClientBatchRequestMsg" << KVLOG(senderId, clientId, cid) << " to the current primary");
   }
 }
 
