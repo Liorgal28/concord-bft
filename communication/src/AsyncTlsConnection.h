@@ -33,7 +33,7 @@ typedef asio::ssl::stream<asio::ip::tcp::socket> SSL_SOCKET;
 class AsyncTlsConnection : public std::enable_shared_from_this<AsyncTlsConnection> {
  public:
   static constexpr std::chrono::seconds READ_TIMEOUT = std::chrono::seconds(10);
-  static constexpr std::chrono::seconds WRITE_TIMEOUT = READ_TIMEOUT;
+  static constexpr std::chrono::seconds WRITE_TIMEOUT = std::chrono::seconds(1);
 
   // We require a factory function because we can't call shared_from_this() in the constructor.
   //
