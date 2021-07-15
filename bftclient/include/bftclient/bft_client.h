@@ -60,10 +60,10 @@ class Client {
   // Wait for messages until we get a quorum or a retry timeout.
   //
   // Inserts the Replies to the input queue.
-  void wait(std::unordered_map<uint64_t, Reply>& replies);
+  void wait(std::unordered_map<uint64_t, Reply>& replies, bft::client::Msg msg);
 
   // Return a Reply on quorum, or std::nullopt on timeout.
-  std::optional<Reply> wait();
+  std::optional<Reply> wait(bft::client::Msg msg);
 
   // Extract a matcher configurations from operational configurations
   //

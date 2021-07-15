@@ -221,7 +221,7 @@ Reply Client::send(const MatchConfig& match_config,
       communication_->send(dests, std::move(msg));
     }
 
-    if (auto reply = wait()) {
+    if (auto reply = wait(msg)) {
       expected_commit_time_ms_.add(
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count());
       reply_certificates_.clear();
@@ -254,7 +254,7 @@ SeqNumToReplyMap Client::sendBatch(std::deque<WriteRequest>& write_requests, con
       communication_->send(dests, std::move(msg));
     }
 
-    wait(replies);
+    wait(replies, msg);
     metrics_.retransmissions.Get().Inc();
   }
   reply_certificates_.clear();
@@ -269,9 +269,9 @@ SeqNumToReplyMap Client::sendBatch(std::deque<WriteRequest>& write_requests, con
   throw BatchTimeoutException(cid);
 }
 
-std::optional<Reply> Client::wait() {
+std::optional<Reply> Client::wait(bft::client::Msg msg) {
   SeqNumToReplyMap replies;
-  wait(replies);
+  wait(replies, msg);
   if (replies.empty()) {
     static constexpr size_t CLEAR_MATCHER_REPLIES_THRESHOLD = 5;
     // reply_certificates_ should hold just one request when using this wait method
@@ -287,10 +287,11 @@ std::optional<Reply> Client::wait() {
   return reply;
 }
 
-void Client::wait(SeqNumToReplyMap& replies) {
+void Client::wait(SeqNumToReplyMap& replies, bft::client::Msg msg) {
   auto now = std::chrono::steady_clock::now();
   auto retry_timeout = std::chrono::milliseconds(expected_commit_time_ms_.upperLimit());
   auto end_wait = now + retry_timeout;
+  auto end_wait_test = now + std::chrono::seconds(2);
   // Keep trying to receive messages until we get quorum or a retry timeout.
   while ((now = std::chrono::steady_clock::now()) < end_wait && !reply_certificates_.empty()) {
     auto wait_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_wait - now);
@@ -304,6 +305,9 @@ void Client::wait(SeqNumToReplyMap& replies) {
         replies.insert(std::make_pair(request->first, match->reply));
         reply_certificates_.erase(request->first);
       }
+    }
+    if (std::chrono::steady_clock::now() > end_wait_test) {
+      if (primary_) communication_->send(primary_.value().val, std::move(msg));
     }
   }
   if (!reply_certificates_.empty()) primary_ = std::nullopt;
